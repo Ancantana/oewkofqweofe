@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live ASCII Art</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+        }
+        #captureVideo {
+            width: 50%;
+            height: 100vh;
+            object-fit: cover;
+        }
+        #rightPanel {
+            width: 50%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #asciiArtContainer {
+            height: 50%;
+            background-color: #000;
+            border: none;
+            padding: 17px;
+            color: #FFF;
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+            font-size: 8px;
+            resize: none;
+        }
+        #textInput {
+            height: 50%;
+            background-color: #eee;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            resize: none;
+        }
+    </style>
+</head>
+<body>
+    <video id="captureVideo" autoplay playsinline muted></video>
+    <div id="rightPanel">
+        <pre id="asciiArtContainer"></pre>
+        <textarea id="textInput" placeholder="Type something..."></textarea>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const captureVideo = document.getElementById('captureVideo');
+            const textInput = document.getElementById('textInput');
+            const asciiArtContainer = document.getElementById('asciiArtContainer');
+            let canvas = document.createElement('canvas');
+            let context = canvas.getContext('2d');
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    captureVideo.srcObject = stream;
+                    captureVideo.onloadedmetadata = function() {
+                        canvas.width = captureVideo.videoWidth;
+                        canvas.height = captureVideo.videoHeight;
+                        captureVideo.play();
+                    };
+                })
+                .catch(function(error) {
+                    console.error("Error accessing the webcam: ", error);
+                });
+
+            textInput.addEventListener('input', function() {
+                const frameData = captureFrame();
+                convertToAscii(frameData, textInput.value);
+            });
+
+            function captureFrame() {
+                context.drawImage(captureVideo, 0, 0, canvas.width, canvas.height);
+                return context.getImageData(0, 0, canvas.width, canvas.height);
+            }
+
+            function convertToAscii(imageData, chars) {
+                if (chars.length === 0) {
+                    asciiArtContainer.textContent = 'Please type to generate ASCII art.';
+                    return;
+                }
+
+                let asciiArt = '';
+                for (let i = 0; i < imageData.height; i += 10) {
+                    for (let j = 0; j < imageData.width; j += 5) {
+                        const offset = (i * imageData.width + j) * 4;
+                        const brightness = (imageData.data[offset] + imageData.data[offset + 1] + imageData.data[offset + 2]) / 3;
+                        const charIndex = Math.floor((brightness / 255) * (chars.length - 1));
+                        asciiArt += chars[charIndex];
+                    }
+                    asciiArt += '\n';
+                }
+
+                asciiArtContainer.textContent = asciiArt;
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
